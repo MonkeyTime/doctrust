@@ -300,6 +300,62 @@
         font: 500 14px/1.65 "Avenir Next", "Segoe UI", system-ui, sans-serif;
       }
 
+      .playground {
+        display: grid;
+        gap: 16px;
+        margin-top: 18px;
+        padding: 22px;
+        border-radius: 24px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.58);
+        box-shadow: 0 18px 40px rgba(22, 33, 47, 0.06);
+      }
+
+      .playground-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 16px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field label {
+        font: 600 12px/1.2 "Avenir Next", "Segoe UI", system-ui, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field textarea {
+        width: 100%;
+        border: 1px solid rgba(22, 33, 47, 0.16);
+        border-radius: 16px;
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--ink);
+        font: 500 14px/1.5 "Avenir Next", "Segoe UI", system-ui, sans-serif;
+      }
+
+      .field textarea {
+        min-height: 360px;
+        resize: vertical;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      .result {
+        min-height: 100px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: #18232f;
+        color: #f4f7f9;
+        font: 500 13px/1.6 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        white-space: pre-wrap;
+      }
+
       .dots {
         display: inline-flex;
         gap: 6px;
@@ -472,6 +528,48 @@
           </div>
         </section>
 
+        <section id="playground" class="section">
+          <h2>Interactive check</h2>
+          <p>
+            Paste a payload, set the expected payment details, and see whether the profile matches. This is a simple
+            browser-side illustration of the verification logic.
+          </p>
+          <div class="playground">
+            <div class="playground-grid">
+              <div class="field">
+                <label for="payload">Payload</label>
+                <textarea id="payload" spellcheck="false"></textarea>
+              </div>
+              <div class="stack">
+                <div class="field">
+                  <label for="iban">Expected IBAN</label>
+                  <input id="iban" type="text" />
+                </div>
+                <div class="field">
+                  <label for="beneficiary">Expected Beneficiary</label>
+                  <input id="beneficiary" type="text" />
+                </div>
+                <div class="field">
+                  <label for="amount">Expected Amount</label>
+                  <input id="amount" type="text" />
+                </div>
+                <div class="field">
+                  <label for="reference">Expected Reference</label>
+                  <input id="reference" type="text" />
+                </div>
+                <div class="field">
+                  <label for="transactionId">Expected Transaction ID</label>
+                  <input id="transactionId" type="text" />
+                </div>
+                <div class="field">
+                  <button class="btn primary" id="checkBtn" type="button">Check payment profile</button>
+                </div>
+              </div>
+            </div>
+            <div class="result" id="result" aria-live="polite"></div>
+          </div>
+        </section>
+
         <section id="sdk" class="section">
           <h2>SDKs</h2>
           <div class="cards">
@@ -497,16 +595,113 @@
             aligned, and add conformance tests and integration examples.
             <span class="dots" aria-hidden="true"><span></span><span></span><span></span></span>
           </p>
-        </section>
-      </main>
+        </section>      </main>
 
       <footer class="footer">
         DocTrust is an open draft standard for signed invoices and payment instructions.
         <br />
-        <a href="https://github.com/MonkeyTime/doctrust">GitHub repo</a> Â·
-        <a href="./README.md">README</a> Â·
-        <a href="./spec/v1.md">Spec</a>
+        <a href="https://github.com/MonkeyTime/doctrust">GitHub repo</a> ·
+        <a href="./README.md">README</a> ·
+        <a href="./spec/v1.md">Spec</a> ·
+        <a href="./SECURITY.md">Security</a> ·
+        <a href="./conformance/README.md">Conformance</a>
       </footer>
     </div>
+    <script>
+      const samplePayload = {
+        version: "1",
+        issuer: {
+          issuer_id: "company:acme-eu",
+          display_name: "ACME Europe SARL",
+          trust_anchor_id: "registry:acme-trust-root"
+        },
+        document: {
+          document_id: "INV-2026-000184",
+          document_type: "invoice",
+          beneficiary_name: "ACME Europe SARL",
+          iban: "BE68 5390 0754 7034",
+          amount: 1499.95,
+          currency: "EUR",
+          reference: "RF18539007547034",
+          due_date: "2026-07-15",
+          transaction_id: "TX-2026-06-25-000184",
+          communication: "Invoice INV-2026-000184"
+        },
+        intent: "payment",
+        issued_at: "2026-06-25T10:00:00Z",
+        expires_at: "2026-07-15T23:59:59Z",
+        nonce: "demo-000184",
+        alg: "Ed25519",
+        sig: "base64url..."
+      };
+
+      const payloadEl = document.getElementById("payload");
+      const ibanEl = document.getElementById("iban");
+      const beneficiaryEl = document.getElementById("beneficiary");
+      const amountEl = document.getElementById("amount");
+      const referenceEl = document.getElementById("reference");
+      const transactionIdEl = document.getElementById("transactionId");
+      const resultEl = document.getElementById("result");
+      const checkBtn = document.getElementById("checkBtn");
+
+      payloadEl.value = JSON.stringify(samplePayload, null, 2);
+      ibanEl.value = samplePayload.document.iban;
+      beneficiaryEl.value = samplePayload.document.beneficiary_name;
+      amountEl.value = String(samplePayload.document.amount);
+      referenceEl.value = samplePayload.document.reference;
+      transactionIdEl.value = samplePayload.document.transaction_id;
+
+      function present(value) {
+        return value !== undefined && value !== null && value !== "";
+      }
+
+      function same(actual, expected) {
+        if (expected === undefined || expected === "") {
+          return true;
+        }
+
+        if (typeof actual === "number") {
+          return Number(actual) === Number(expected);
+        }
+
+        return String(actual) === String(expected);
+      }
+
+      function checkPaymentProfile() {
+        try {
+          const payload = JSON.parse(payloadEl.value);
+          const doc = payload.document || {};
+          const required = ["document_id", "document_type", "beneficiary_name", "iban", "amount", "currency", "reference", "due_date", "transaction_id", "communication"];
+          const missing = required.filter((field) => !present(doc[field]));
+          const mismatches = [];
+
+          if (payload.intent !== "payment") {
+            mismatches.push("intent");
+          }
+          if (doc.document_type !== "invoice") {
+            mismatches.push("document_type");
+          }
+
+          if (!same(doc.beneficiary_name, beneficiaryEl.value)) mismatches.push("beneficiary_name");
+          if (!same(doc.iban, ibanEl.value)) mismatches.push("iban");
+          if (!same(doc.amount, amountEl.value)) mismatches.push("amount");
+          if (!same(doc.reference, referenceEl.value)) mismatches.push("reference");
+          if (!same(doc.transaction_id, transactionIdEl.value)) mismatches.push("transaction_id");
+
+          const ok = missing.length === 0 && mismatches.length === 0;
+          resultEl.textContent = JSON.stringify({
+            ok,
+            profile: "payment.invoice",
+            missingFields: missing,
+            mismatches
+          }, null, 2);
+        } catch (error) {
+          resultEl.textContent = `Invalid JSON payload: ${error.message}`;
+        }
+      }
+
+      checkBtn.addEventListener("click", checkPaymentProfile);
+      checkPaymentProfile();
+    </script>
   </body>
 </html>

@@ -33,10 +33,12 @@ Email and PDF workflows are easy to imitate. DocTrust adds a signed payload and 
 
 - `spec/` - protocol and format specification
 - `schemas/` - machine-readable schemas
+- `conformance/` - versioned conformance vectors
 - `examples/` - payload and registry examples
 - `sdk-js/` - JavaScript reference SDK
 - `sdk-python/` - Python reference SDK
 - `sdk-dotnet/` - .NET reference SDK
+- `SECURITY.md` - vulnerability disclosure policy
 
 ## Getting started
 

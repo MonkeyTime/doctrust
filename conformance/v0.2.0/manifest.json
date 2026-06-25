@@ -1,0 +1,43 @@
+{
+  "version": "0.2.0",
+  "profile": "payment.invoice",
+  "vectors": [
+    {
+      "id": "payment-valid",
+      "file": "payment-valid.json",
+      "category": "valid",
+      "expect": {
+        "signature": "valid",
+        "transport": "dtp1z.",
+        "payment_profile_ok": true
+      }
+    },
+    {
+      "id": "payment-tampered-iban",
+      "file": "payment-tampered-iban.json",
+      "category": "invalid",
+      "expect": {
+        "signature": "invalid",
+        "payment_profile_ok": false
+      }
+    },
+    {
+      "id": "payment-missing-communication",
+      "file": "payment-missing-communication.json",
+      "category": "invalid",
+      "expect": {
+        "signature": "valid",
+        "payment_profile_ok": false
+      }
+    },
+    {
+      "id": "payment-expired",
+      "file": "payment-expired.json",
+      "category": "invalid",
+      "expect": {
+        "signature": "expired",
+        "payment_profile_ok": true
+      }
+    }
+  ]
+}
