@@ -311,6 +311,20 @@
         box-shadow: 0 18px 40px rgba(22, 33, 47, 0.06);
       }
 
+      .upload-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .upload-note {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+        font-size: 0.96rem;
+      }
+
       .playground-grid {
         display: grid;
         grid-template-columns: 1.15fr 0.85fr;
@@ -583,6 +597,26 @@
           </div>
         </section>
 
+        <section id="upload" class="section">
+          <h2>Upload examples</h2>
+          <p>
+            Upload a document export or use one of the built-in examples to see how the page can recover a compact QR
+            payload or a hidden PDF metadata payload from the file itself.
+          </p>
+          <div class="playground">
+            <div class="upload-actions">
+              <input id="uploadInput" type="file" accept=".pdf,.txt,.json,application/pdf,text/plain,application/json" />
+              <button class="btn primary" id="loadQrSample" type="button">Load QR sample</button>
+              <button class="btn secondary" id="loadPdfSample" type="button">Load PDF metadata sample</button>
+            </div>
+            <p class="upload-note">
+              The file can be a PDF, a text export, or a raw attachment. The demo scans for the compact `dtp1z.`
+              envelope and, when found, decodes it back to JSON.
+            </p>
+            <pre class="result" id="uploadResult" aria-live="polite">Choose a file or load an example to inspect its embedded payload.</pre>
+          </div>
+        </section>
+
         <section id="sdk" class="section">
           <h2>SDKs</h2>
           <div class="cards">
@@ -658,6 +692,10 @@
       const communicationEl = document.getElementById("communication");
       const resultEl = document.getElementById("result");
       const checkBtn = document.getElementById("checkBtn");
+      const uploadInput = document.getElementById("uploadInput");
+      const uploadResult = document.getElementById("uploadResult");
+      const loadQrSampleBtn = document.getElementById("loadQrSample");
+      const loadPdfSampleBtn = document.getElementById("loadPdfSample");
 
       payloadEl.value = JSON.stringify(samplePayload, null, 2);
       ibanEl.value = samplePayload.document.iban;
@@ -729,6 +767,94 @@
 
       checkBtn.addEventListener("click", checkPaymentProfile);
       checkPaymentProfile();
+
+      function bytesToLatin1(bytes) {
+        return new TextDecoder("latin1").decode(bytes);
+      }
+
+      function findCompactEnvelope(text) {
+        const match = text.match(/dtp1z\.[A-Za-z0-9_-]+/);
+        return match ? match[0] : null;
+      }
+
+      function base64UrlToBytes(value) {
+        const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+        const binary = atob(padded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      async function decodeCompactEnvelope(envelope) {
+        const compressed = base64UrlToBytes(envelope.slice("dtp1z.".length));
+        if (typeof DecompressionStream === "undefined") {
+          throw new Error("This browser does not support raw deflate decompression");
+        }
+
+        const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        return await new Response(stream).text();
+      }
+
+      async function inspectUpload(file) {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const text = bytesToLatin1(bytes);
+        const compact = findCompactEnvelope(text);
+
+        if (!compact) {
+          uploadResult.textContent = JSON.stringify({
+            file: file.name,
+            carrier: "unknown",
+            note: "No dtp1z. envelope detected in this file."
+          }, null, 2);
+          return;
+        }
+
+        try {
+          const payloadJson = await decodeCompactEnvelope(compact);
+          let parsed;
+          try {
+            parsed = JSON.parse(payloadJson);
+          } catch {
+            parsed = payloadJson;
+          }
+
+          uploadResult.textContent = JSON.stringify({
+            file: file.name,
+            carrier: file.name.toLowerCase().endsWith(".pdf") ? "pdf-metadata" : "compact-qr",
+            detectedEnvelope: compact.slice(0, 32) + "…",
+            payload: parsed
+          }, null, 2);
+        } catch (error) {
+          uploadResult.textContent = JSON.stringify({
+            file: file.name,
+            carrier: "compact-qr",
+            detectedEnvelope: compact.slice(0, 32) + "…",
+            error: error.message
+          }, null, 2);
+        }
+      }
+
+      uploadInput.addEventListener("change", () => {
+        const [file] = uploadInput.files || [];
+        if (file) {
+          void inspectUpload(file);
+        }
+      });
+
+      loadQrSampleBtn.addEventListener("click", async () => {
+        const response = await fetch("./examples/upload/qr-compact.txt");
+        const text = await response.text();
+        await inspectUpload(new File([text], "qr-compact.txt", { type: "text/plain" }));
+      });
+
+      loadPdfSampleBtn.addEventListener("click", async () => {
+        const response = await fetch("./examples/upload/hidden-metadata.pdf");
+        const bytes = await response.arrayBuffer();
+        await inspectUpload(new File([bytes], "hidden-metadata.pdf", { type: "application/pdf" }));
+      });
     </script>
   </body>
 </html>
