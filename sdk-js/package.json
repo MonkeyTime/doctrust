@@ -1,0 +1,16 @@
+{
+  "name": "document-trust-payload-sdk",
+  "version": "0.1.0",
+  "description": "Reference implementation for the Document Trust Payload v1 specification",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "dtp-verify": "./bin/verify.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/document-trust-payload/v1.schema.json",
+  "title": "Document Trust Payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "issuer",
+    "document",
+    "intent",
+    "issued_at",
+    "expires_at",
+    "nonce",
+    "alg",
+    "sig"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1"
+    },
+    "issuer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issuer_id", "display_name", "trust_anchor_id"],
+      "properties": {
+        "issuer_id": { "type": "string", "minLength": 1 },
+        "display_name": { "type": "string", "minLength": 1 },
+        "trust_anchor_id": { "type": "string", "minLength": 1 },
+        "country": { "type": "string", "minLength": 2, "maxLength": 2 },
+        "vat_id": { "type": "string" },
+        "website": { "type": "string", "format": "uri" }
+      }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["document_id"],
+      "properties": {
+        "document_id": { "type": "string", "minLength": 1 },
+        "document_type": { "type": "string" },
+        "beneficiary_name": { "type": "string" },
+        "iban": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+        "reference": { "type": "string" },
+        "due_date": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "invoice_number": { "type": "string" },
+        "purchase_order": { "type": "string" },
+        "purpose": { "type": "string" }
+      }
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 8
+    },
+    "alg": {
+      "type": "string",
+      "enum": ["Ed25519", "ES256"]
+    },
+    "sig": {
+      "type": "string",
+      "minLength": 16
+    }
+  }
+}

@@ -1,0 +1,26 @@
+# Build outputs
+bin/
+obj/
+dist/
+out/
+coverage/
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary files
+tmp-*.json
+tmp-*.pem

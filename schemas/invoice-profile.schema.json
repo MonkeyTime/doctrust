@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/document-trust-payload/invoice-profile.schema.json",
+  "title": "Document Trust Payload Invoice Profile",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "intent": { "type": "string", "const": "payment" },
+    "document": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "document_id",
+        "document_type",
+        "beneficiary_name",
+        "iban",
+        "amount",
+        "currency",
+        "reference",
+        "due_date"
+      ],
+      "properties": {
+        "document_id": { "type": "string", "minLength": 1 },
+        "document_type": { "type": "string", "const": "invoice" },
+        "beneficiary_name": { "type": "string", "minLength": 1 },
+        "iban": { "type": "string", "minLength": 10 },
+        "amount": { "type": ["number", "string"] },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+        "reference": { "type": "string", "minLength": 1 },
+        "due_date": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
