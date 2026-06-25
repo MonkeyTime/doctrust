@@ -2,6 +2,8 @@
 
 Signed payloads for invoices and payment instructions.
 
+Project page: https://monkeytime.github.io/doctrust/
+
 DocTrust is a small open standard draft for embedding machine-verifiable proof into documents and QR codes. It aims to help software detect tampering of critical fields such as IBAN, beneficiary name, amount, and payment reference before a transfer is approved.
 
 ## Why it exists
