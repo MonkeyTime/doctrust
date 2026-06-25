@@ -47,3 +47,7 @@ Email and PDF workflows are easy to imitate. DocTrust adds a signed payload and 
 ## Status
 
 This repository is early-stage but executable. The current focus is to tighten the specification, keep the SDKs aligned, and add conformance tests and integration examples.
+
+## Releases
+
+- [0.1.0 notes](RELEASES/0.1.0.md)
