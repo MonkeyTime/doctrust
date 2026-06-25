@@ -4,6 +4,7 @@ from .qr import decode_transport_payload, encode_transport_payload, is_compact_t
 from .sign import sign_payload
 from .trust_registry import load_trust_registry_from_file, resolve_trust_anchor_public_key
 from .verify import canonical_payload_body, verify_signed_payload, verify_transport_payload
+from .verify import validate_payment_profile
 
 __all__ = [
     "canonicalize",
@@ -16,6 +17,7 @@ __all__ = [
     "load_trust_registry_from_file",
     "resolve_trust_anchor_public_key",
     "canonical_payload_body",
+    "validate_payment_profile",
     "verify_signed_payload",
     "verify_transport_payload",
 ]

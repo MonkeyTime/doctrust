@@ -35,7 +35,9 @@ var payload = """
     "amount": 1499.95,
     "currency": "EUR",
     "reference": "RF18539007547034",
-    "due_date": "2026-07-15"
+    "due_date": "2026-07-15",
+    "transaction_id": "TX-2026-06-25-000184",
+    "communication": "Invoice INV-2026-000184"
   },
   "intent": "payment",
   "issued_at": "2026-06-25T10:00:00Z",
@@ -117,5 +119,17 @@ var edPayload = """
 var edSigned = DocumentTrustPayloadSdk.SignPayload(edPayload, edPrivatePem);
 var edResult = DocumentTrustPayloadSdk.VerifySignedPayload(edSigned, edPublicPem, now: new DateTimeOffset(2026, 6, 26, 0, 0, 0, TimeSpan.Zero));
 Assert(edResult.Ok, "Ed25519 verify should pass");
+
+var paymentProfile = DocumentTrustPayloadSdk.ValidatePaymentProfile(payload, new PaymentProfileExpectation(
+    BeneficiaryName: "ACME Europe SARL",
+    Iban: "BE68 5390 0754 7034",
+    Amount: 1499.95m,
+    Currency: "EUR",
+    Reference: "RF18539007547034",
+    TransactionId: "TX-2026-06-25-000184"));
+
+Assert(paymentProfile.Ok, "Payment profile should validate");
+Assert(paymentProfile.MissingFields.Count == 0, "Payment profile should not miss fields");
+Assert(paymentProfile.Mismatches.Count == 0, "Payment profile should not mismatch");
 
 Console.WriteLine("All .NET reference tests passed.");

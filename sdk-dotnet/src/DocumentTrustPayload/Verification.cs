@@ -76,6 +76,50 @@ public static class Verification
         return Canonicalize.JsonToCanonicalString(AddSignature(payload, Crypto.Base64UrlEncode(sig)));
     }
 
+    public static PaymentProfileValidationResult ValidatePaymentProfile(string payloadJson, PaymentProfileExpectation? expected = null)
+    {
+        var payload = ValidatePayloadForSigning(payloadJson);
+        var document = payload.GetProperty("document");
+        expected ??= new PaymentProfileExpectation();
+
+        var requiredFields = new[]
+        {
+            "document_id",
+            "document_type",
+            "beneficiary_name",
+            "iban",
+            "amount",
+            "currency",
+            "reference",
+            "due_date",
+            "transaction_id",
+            "communication"
+        };
+
+        var missingFields = requiredFields
+            .Where(field => !HasPresentValue(document, field))
+            .ToArray();
+
+        var mismatches = new List<string>();
+        if (payload.GetProperty("intent").GetString() != "payment") mismatches.Add("intent");
+        if (!Matches(document, "document_type", "invoice")) mismatches.Add("document_type");
+        if (expected.DocumentType is not null && !Matches(document, "document_type", expected.DocumentType)) mismatches.Add("document_type");
+        if (expected.BeneficiaryName is not null && !Matches(document, "beneficiary_name", expected.BeneficiaryName)) mismatches.Add("beneficiary_name");
+        if (expected.Iban is not null && !Matches(document, "iban", expected.Iban)) mismatches.Add("iban");
+        if (expected.Amount is not null && !Matches(document, "amount", expected.Amount.Value)) mismatches.Add("amount");
+        if (expected.Currency is not null && !Matches(document, "currency", expected.Currency)) mismatches.Add("currency");
+        if (expected.Reference is not null && !Matches(document, "reference", expected.Reference)) mismatches.Add("reference");
+        if (expected.DueDate is not null && !Matches(document, "due_date", expected.DueDate)) mismatches.Add("due_date");
+        if (expected.TransactionId is not null && !Matches(document, "transaction_id", expected.TransactionId)) mismatches.Add("transaction_id");
+        if (expected.Communication is not null && !Matches(document, "communication", expected.Communication)) mismatches.Add("communication");
+
+        return new PaymentProfileValidationResult(
+            missingFields.Length == 0 && mismatches.Count == 0,
+            "payment.invoice",
+            missingFields,
+            mismatches);
+    }
+
     private static JsonElement ValidatePayload(string payloadJson)
     {
         using var doc = JsonDocument.Parse(payloadJson);
@@ -193,5 +237,44 @@ public static class Verification
 
         using var doc = JsonDocument.Parse(ms.ToArray());
         return doc.RootElement.Clone();
+    }
+
+    private static bool HasPresentValue(JsonElement document, string propertyName)
+    {
+        if (!document.TryGetProperty(propertyName, out var value))
+        {
+            return false;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => !string.IsNullOrWhiteSpace(value.GetString()),
+            JsonValueKind.Number => true,
+            _ => value.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined
+        };
+    }
+
+    private static bool Matches(JsonElement document, string propertyName, string expected)
+    {
+        return document.TryGetProperty(propertyName, out var value) && string.Equals(GetComparable(value), expected, StringComparison.Ordinal);
+    }
+
+    private static bool Matches(JsonElement document, string propertyName, decimal expected)
+    {
+        return document.TryGetProperty(propertyName, out var value) &&
+               decimal.TryParse(GetComparable(value), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var parsed) &&
+               parsed == expected;
+    }
+
+    private static string GetComparable(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => value.GetRawText()
+        };
     }
 }

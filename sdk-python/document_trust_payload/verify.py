@@ -44,6 +44,36 @@ def _validate_payload(payload):
     return payload
 
 
+def _validate_payment_profile_payload(payload):
+    if not isinstance(payload, dict):
+        raise PayloadValidationError("Payload must be a JSON object")
+
+    _validate_required_string(payload.get("version"), "version")
+    _validate_required_string(payload.get("intent"), "intent")
+    _validate_required_string(payload.get("issued_at"), "issued_at")
+    _validate_required_string(payload.get("expires_at"), "expires_at")
+    _validate_required_string(payload.get("nonce"), "nonce")
+    _validate_required_string(payload.get("alg"), "alg")
+
+    if payload["version"] != "1":
+        raise PayloadValidationError(f"Unsupported version: {payload['version']}")
+
+    issuer = payload.get("issuer")
+    if not isinstance(issuer, dict):
+        raise PayloadValidationError("Missing or invalid issuer object")
+
+    _validate_required_string(issuer.get("issuer_id"), "issuer.issuer_id")
+    _validate_required_string(issuer.get("display_name"), "issuer.display_name")
+    _validate_required_string(issuer.get("trust_anchor_id"), "issuer.trust_anchor_id")
+
+    document = payload.get("document")
+    if not isinstance(document, dict):
+        raise PayloadValidationError("Missing or invalid document object")
+
+    _validate_required_string(document.get("document_id"), "document.document_id")
+    return payload
+
+
 def _strip_signature(payload):
     body = dict(payload)
     body.pop("sig", None)
@@ -105,3 +135,64 @@ def verify_transport_payload(transport_payload, public_key_pem: str | None = Non
     payload_json = decode_transport_payload(transport_payload)
     payload = json.loads(payload_json)
     return verify_signed_payload(payload, public_key_pem=public_key_pem, trust_registry=trust_registry, now=now)
+
+
+def _present(value):
+    return value is not None and value != ""
+
+
+def _compare_expected(actual, expected):
+    if expected is None:
+        return True
+    if isinstance(actual, (int, float)) or isinstance(expected, (int, float)):
+        return float(actual) == float(expected)
+    return str(actual) == str(expected)
+
+
+def validate_payment_profile(payload, expected=None):
+    verified_payload = _validate_payment_profile_payload(payload)
+    document = verified_payload["document"]
+    expected = expected or {}
+
+    required_fields = [
+        "document_id",
+        "document_type",
+        "beneficiary_name",
+        "iban",
+        "amount",
+        "currency",
+        "reference",
+        "due_date",
+        "transaction_id",
+        "communication",
+    ]
+
+    missing_fields = [field for field in required_fields if not _present(document.get(field))]
+    mismatches = []
+
+    if verified_payload.get("intent") != "payment":
+        mismatches.append("intent")
+
+    if document.get("document_type") != "invoice":
+        mismatches.append("document_type")
+
+    for field in [
+        "document_type",
+        "beneficiary_name",
+        "iban",
+        "amount",
+        "currency",
+        "reference",
+        "due_date",
+        "transaction_id",
+        "communication",
+    ]:
+        if field in expected and not _compare_expected(document.get(field), expected.get(field)):
+            mismatches.append(field)
+
+    return {
+        "ok": not missing_fields and not mismatches,
+        "profile": "payment.invoice",
+        "missing_fields": missing_fields,
+        "mismatches": mismatches,
+    }

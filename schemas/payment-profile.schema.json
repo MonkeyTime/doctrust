@@ -5,6 +5,7 @@
   "type": "object",
   "additionalProperties": true,
   "properties": {
+    "intent": { "type": "string", "const": "payment" },
     "issuer": {
       "type": "object",
       "required": ["issuer_id", "trust_anchor_id"],

@@ -10,6 +10,7 @@ from document_trust_payload import (
     decode_transport_payload,
     is_compact_transport_payload,
     sign_payload,
+    validate_payment_profile,
     verify_signed_payload,
     verify_transport_payload,
 )
@@ -45,11 +46,15 @@ class ReferenceTests(unittest.TestCase):
             },
             "document": {
                 "document_id": "INV-2026-000184",
+                "document_type": "invoice",
                 "beneficiary_name": "ACME Europe SARL",
                 "iban": "BE68 5390 0754 7034",
                 "amount": 1499.95,
                 "currency": "EUR",
                 "reference": "RF18539007547034",
+                "due_date": "2026-07-15",
+                "transaction_id": "TX-2026-06-25-000184",
+                "communication": "Invoice INV-2026-000184",
             },
             "intent": "payment",
             "issued_at": "2026-06-25T10:00:00Z",
@@ -78,6 +83,19 @@ class ReferenceTests(unittest.TestCase):
         signed["document"]["iban"] = "BE00 0000 0000 0000"
         with self.assertRaises(Exception):
             verify_signed_payload(signed, public_key_pem=self.public_key_pem, now=datetime(2026, 6, 26, tzinfo=timezone.utc))
+
+    def test_validate_payment_profile(self):
+        result = validate_payment_profile(self.payload, {
+            "beneficiary_name": "ACME Europe SARL",
+            "iban": "BE68 5390 0754 7034",
+            "amount": 1499.95,
+            "currency": "EUR",
+            "reference": "RF18539007547034",
+            "transaction_id": "TX-2026-06-25-000184",
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["missing_fields"], [])
+        self.assertEqual(result["mismatches"], [])
 
 
 if __name__ == "__main__":

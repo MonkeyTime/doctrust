@@ -10,6 +10,26 @@ function validateRequiredString(value, name) {
   }
 }
 
+function validateDocumentPaymentField(document, fieldName) {
+  const value = document[fieldName];
+  if (value === undefined || value === null || value === "") {
+    return false;
+  }
+  return true;
+}
+
+function compareExpectedValue(actual, expected) {
+  if (expected === undefined) {
+    return true;
+  }
+
+  if (typeof actual === "number" || typeof expected === "number") {
+    return Number(actual) === Number(expected);
+  }
+
+  return String(actual) === String(expected);
+}
+
 function validatePayload(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new PayloadValidationError("Payload must be a JSON object");
@@ -22,6 +42,39 @@ function validatePayload(payload) {
   validateRequiredString(payload.nonce, "nonce");
   validateRequiredString(payload.alg, "alg");
   validateRequiredString(payload.sig, "sig");
+
+  if (payload.version !== "1") {
+    throw new PayloadValidationError(`Unsupported version: ${payload.version}`);
+  }
+
+  if (!payload.issuer || typeof payload.issuer !== "object" || Array.isArray(payload.issuer)) {
+    throw new PayloadValidationError("Missing or invalid issuer object");
+  }
+
+  validateRequiredString(payload.issuer.issuer_id, "issuer.issuer_id");
+  validateRequiredString(payload.issuer.display_name, "issuer.display_name");
+  validateRequiredString(payload.issuer.trust_anchor_id, "issuer.trust_anchor_id");
+
+  if (!payload.document || typeof payload.document !== "object" || Array.isArray(payload.document)) {
+    throw new PayloadValidationError("Missing or invalid document object");
+  }
+
+  validateRequiredString(payload.document.document_id, "document.document_id");
+
+  return payload;
+}
+
+function validatePaymentProfilePayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new PayloadValidationError("Payload must be a JSON object");
+  }
+
+  validateRequiredString(payload.version, "version");
+  validateRequiredString(payload.intent, "intent");
+  validateRequiredString(payload.issued_at, "issued_at");
+  validateRequiredString(payload.expires_at, "expires_at");
+  validateRequiredString(payload.nonce, "nonce");
+  validateRequiredString(payload.alg, "alg");
 
   if (payload.version !== "1") {
     throw new PayloadValidationError(`Unsupported version: ${payload.version}`);
@@ -111,4 +164,60 @@ export function verifyTransportPayload(transportPayload, options = {}) {
   const payloadJson = decodeTransportPayload(transportPayload);
   const payload = JSON.parse(payloadJson);
   return verifySignedPayload(payload, options);
+}
+
+export function validatePaymentProfile(payload, expected = {}) {
+  const verifiedPayload = validatePaymentProfilePayload(payload);
+  const document = verifiedPayload.document;
+
+  const requiredFields = [
+    "document_id",
+    "document_type",
+    "beneficiary_name",
+    "iban",
+    "amount",
+    "currency",
+    "reference",
+    "due_date",
+    "transaction_id",
+    "communication"
+  ];
+
+  const missingFields = requiredFields.filter((field) => !validateDocumentPaymentField(document, field));
+  const mismatches = [];
+
+  if (verifiedPayload.intent !== "payment") {
+    mismatches.push("intent");
+  }
+
+  if (document.document_type !== "invoice") {
+    mismatches.push("document_type");
+  }
+
+  const comparisons = [
+    ["document_type", expected.document_type],
+    ["beneficiary_name", expected.beneficiary_name],
+    ["iban", expected.iban],
+    ["amount", expected.amount],
+    ["currency", expected.currency],
+    ["reference", expected.reference],
+    ["due_date", expected.due_date],
+    ["transaction_id", expected.transaction_id],
+    ["communication", expected.communication]
+  ];
+
+  for (const [field, expectedValue] of comparisons) {
+    if (expectedValue !== undefined && !compareExpectedValue(document[field], expectedValue)) {
+      mismatches.push(field);
+    }
+  }
+
+  const ok = missingFields.length === 0 && mismatches.length === 0;
+
+  return {
+    ok,
+    profile: "payment.invoice",
+    missingFields,
+    mismatches
+  };
 }

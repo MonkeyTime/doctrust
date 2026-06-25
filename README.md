@@ -51,3 +51,4 @@ This repository is early-stage but executable. The current focus is to tighten t
 ## Releases
 
 - [0.1.0 notes](RELEASES/0.1.0.md)
+- [0.2.0 notes](RELEASES/0.2.0.md)

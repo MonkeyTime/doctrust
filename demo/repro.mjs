@@ -62,6 +62,15 @@ const result = sdk.verifyTransportPayload(transport, {
   now: new Date("2026-06-26T00:00:00Z")
 });
 
+const paymentProfile = sdk.validatePaymentProfile(payload, {
+  beneficiary_name: "ACME Europe SARL",
+  iban: "BE68 5390 0754 7034",
+  amount: 1499.95,
+  currency: "EUR",
+  reference: "RF18539007547034",
+  transaction_id: "TX-2026-06-25-000184"
+});
+
 const tampered = JSON.parse(JSON.stringify(signed));
 tampered.document.iban = "BE00 0000 0000 0000";
 
@@ -80,5 +89,6 @@ console.log(JSON.stringify({
   issuer: result.issuerId,
   document: result.documentId,
   transportPrefix: transport.slice(0, 6),
+  paymentProfileOk: paymentProfile.ok,
   tamperRejected
 }, null, 2));

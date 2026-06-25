@@ -9,13 +9,15 @@ Thanks for helping improve DocTrust.
 - SDK parity between JavaScript, Python, and .NET
 - demo flows and documentation
 - trust registry and verification profiles
+- payment profile validation and conformance vectors
 
 ## Before you open a pull request
 
 1. Read `spec/v1.md`.
 2. Check whether the change affects the canonical payload or the trust model.
-3. Add or update a test when behavior changes.
-4. Keep examples small and reproducible.
+3. Check whether the change affects the invoice or payment profile.
+4. Add or update a test when behavior changes.
+5. Keep examples small and reproducible.
 
 ## Local checks
 
@@ -37,3 +39,4 @@ Releases should include:
 - release notes
 - at least one reproducible demo path
 - passing reference tests
+- a short changelog entry for spec, SDK, and demo changes
