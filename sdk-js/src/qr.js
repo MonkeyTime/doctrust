@@ -1,6 +1,7 @@
 import zlib from "node:zlib";
 
 const COMPACT_QR_PREFIX = "dtp1z.";
+const MAX_DECOMPRESSED_BYTES = 1024 * 1024;
 
 export function encodeTransportPayload(payloadJson) {
   const compressed = zlib.deflateRawSync(Buffer.from(payloadJson, "utf8"));
@@ -14,7 +15,8 @@ export function decodeTransportPayload(input) {
 
   if (input.startsWith(COMPACT_QR_PREFIX)) {
     const compressed = Buffer.from(input.slice(COMPACT_QR_PREFIX.length), "base64url");
-    return zlib.inflateRawSync(compressed).toString("utf8");
+    const decoded = zlib.inflateRawSync(compressed, { maxOutputLength: MAX_DECOMPRESSED_BYTES });
+    return decoded.toString("utf8");
   }
 
   return input;

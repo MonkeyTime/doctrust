@@ -104,14 +104,29 @@ public static class Verification
         if (payload.GetProperty("intent").GetString() != "payment") mismatches.Add("intent");
         if (!Matches(document, "document_type", "invoice")) mismatches.Add("document_type");
         if (expected.DocumentType is not null && !Matches(document, "document_type", expected.DocumentType)) mismatches.Add("document_type");
-        if (expected.BeneficiaryName is not null && !Matches(document, "beneficiary_name", expected.BeneficiaryName)) mismatches.Add("beneficiary_name");
-        if (expected.Iban is not null && !Matches(document, "iban", expected.Iban)) mismatches.Add("iban");
-        if (expected.Amount is not null && !Matches(document, "amount", expected.Amount.Value)) mismatches.Add("amount");
-        if (expected.Currency is not null && !Matches(document, "currency", expected.Currency)) mismatches.Add("currency");
-        if (expected.Reference is not null && !Matches(document, "reference", expected.Reference)) mismatches.Add("reference");
-        if (expected.DueDate is not null && !Matches(document, "due_date", expected.DueDate)) mismatches.Add("due_date");
-        if (expected.TransactionId is not null && !Matches(document, "transaction_id", expected.TransactionId)) mismatches.Add("transaction_id");
-        if (expected.Communication is not null && !Matches(document, "communication", expected.Communication)) mismatches.Add("communication");
+        if (expected.BeneficiaryName is null) mismatches.Add("beneficiary_name:expected_missing");
+        else if (!Matches(document, "beneficiary_name", expected.BeneficiaryName)) mismatches.Add("beneficiary_name");
+
+        if (expected.Iban is null) mismatches.Add("iban:expected_missing");
+        else if (!Matches(document, "iban", expected.Iban)) mismatches.Add("iban");
+
+        if (expected.Amount is null) mismatches.Add("amount:expected_missing");
+        else if (!Matches(document, "amount", expected.Amount.Value)) mismatches.Add("amount");
+
+        if (expected.Currency is null) mismatches.Add("currency:expected_missing");
+        else if (!Matches(document, "currency", expected.Currency)) mismatches.Add("currency");
+
+        if (expected.Reference is null) mismatches.Add("reference:expected_missing");
+        else if (!Matches(document, "reference", expected.Reference)) mismatches.Add("reference");
+
+        if (expected.DueDate is null) mismatches.Add("due_date:expected_missing");
+        else if (!Matches(document, "due_date", expected.DueDate)) mismatches.Add("due_date");
+
+        if (expected.TransactionId is null) mismatches.Add("transaction_id:expected_missing");
+        else if (!Matches(document, "transaction_id", expected.TransactionId)) mismatches.Add("transaction_id");
+
+        if (expected.Communication is null) mismatches.Add("communication:expected_missing");
+        else if (!Matches(document, "communication", expected.Communication)) mismatches.Add("communication");
 
         return new PaymentProfileValidationResult(
             missingFields.Length == 0 && mismatches.Count == 0,

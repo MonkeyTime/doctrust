@@ -6,6 +6,7 @@ namespace DocumentTrustPayload;
 public static class Qr
 {
     private const string CompactPrefix = "dtp1z.";
+    private const int MaxDecompressedBytes = 1024 * 1024;
 
     public static string EncodeTransportPayload(string payloadJson)
     {
@@ -35,7 +36,19 @@ public static class Qr
         using var inputStream = new MemoryStream(compressed);
         using var deflate = new DeflateStream(inputStream, CompressionMode.Decompress);
         using var output = new MemoryStream();
-        deflate.CopyTo(output);
+        var buffer = new byte[8192];
+        var total = 0;
+        int read;
+        while ((read = deflate.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            total += read;
+            if (total > MaxDecompressedBytes)
+            {
+                throw new ArgumentException("Compact transport payload is too large", nameof(input));
+            }
+
+            output.Write(buffer, 0, read);
+        }
         return Encoding.UTF8.GetString(output.ToArray());
     }
 

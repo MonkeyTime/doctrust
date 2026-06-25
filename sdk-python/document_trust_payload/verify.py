@@ -7,6 +7,17 @@ from .errors import PayloadValidationError, SignatureVerificationError
 from .qr import decode_transport_payload
 from .trust_registry import resolve_trust_anchor_public_key
 
+PAYMENT_EXPECTED_FIELDS = [
+    "beneficiary_name",
+    "iban",
+    "amount",
+    "currency",
+    "reference",
+    "due_date",
+    "transaction_id",
+    "communication",
+]
+
 
 def _validate_required_string(value, name):
     if not isinstance(value, str) or not value:
@@ -144,15 +155,17 @@ def _present(value):
 def _compare_expected(actual, expected):
     if expected is None:
         return True
-    if isinstance(actual, (int, float)) or isinstance(expected, (int, float)):
-        return float(actual) == float(expected)
+    if isinstance(actual, float) and not (actual == actual and actual not in (float("inf"), float("-inf"))):
+        return False
+    if isinstance(expected, float) and not (expected == expected and expected not in (float("inf"), float("-inf"))):
+        return False
     return str(actual) == str(expected)
 
 
 def validate_payment_profile(payload, expected=None):
     verified_payload = _validate_payment_profile_payload(payload)
     document = verified_payload["document"]
-    expected = expected or {}
+    expected = expected if isinstance(expected, dict) else {}
 
     required_fields = [
         "document_id",
@@ -168,6 +181,7 @@ def validate_payment_profile(payload, expected=None):
     ]
 
     missing_fields = [field for field in required_fields if not _present(document.get(field))]
+    missing_expected_fields = [field for field in PAYMENT_EXPECTED_FIELDS if expected.get(field) is None]
     mismatches = []
 
     if verified_payload.get("intent") != "payment":
@@ -187,12 +201,13 @@ def validate_payment_profile(payload, expected=None):
         "transaction_id",
         "communication",
     ]:
-        if field in expected and not _compare_expected(document.get(field), expected.get(field)):
+        if not _compare_expected(document.get(field), expected.get(field)):
             mismatches.append(field)
 
     return {
-        "ok": not missing_fields and not mismatches,
+        "ok": not missing_fields and not missing_expected_fields and not mismatches,
         "profile": "payment.invoice",
         "missing_fields": missing_fields,
+        "missing_expected_fields": missing_expected_fields,
         "mismatches": mismatches,
     }

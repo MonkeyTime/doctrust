@@ -433,8 +433,8 @@
             <h1>Make invoices and payment instructions harder to fake.</h1>
             <p class="lede">
               DocTrust is an open, machine-verifiable format for signed documents, QR payloads, and bank-facing references.
-              It helps software reject altered IBANs, mismatched beneficiaries, stale references, and forged payment data
-              before a transfer is approved.
+              It helps software reject altered IBANs, mismatched beneficiaries, stale references, forged payment data,
+              and registry misuse before a transfer is approved.
             </p>
             <div class="cta-row">
               <a class="btn primary" href="https://github.com/MonkeyTime/doctrust">View on GitHub</a>
@@ -460,11 +460,15 @@
               </div>
               <div class="metric">
                 <span class="label">Trust</span>
-                <span class="value">Local registry</span>
+                <span class="value">Local registry + issuer binding</span>
               </div>
               <div class="metric">
                 <span class="label">Profile</span>
                 <span class="value">Payment validation</span>
+              </div>
+              <div class="metric">
+                <span class="label">QR</span>
+                <span class="value">Bounded decode</span>
               </div>
             </div>
             <pre class="code">{
@@ -513,6 +517,7 @@
                 <li><strong>beneficiary_name</strong>Name displayed to the payer.</li>
                 <li><strong>iban</strong>Beneficiary account number.</li>
                 <li><strong>amount / currency</strong>Exact payment value.</li>
+                <li><strong>due_date</strong>Validity and timing anchor.</li>
               </ul>
             </div>
             <div class="card">
@@ -558,8 +563,16 @@
                   <input id="reference" type="text" />
                 </div>
                 <div class="field">
+                  <label for="dueDate">Expected Due Date</label>
+                  <input id="dueDate" type="text" />
+                </div>
+                <div class="field">
                   <label for="transactionId">Expected Transaction ID</label>
                   <input id="transactionId" type="text" />
+                </div>
+                <div class="field">
+                  <label for="communication">Expected Communication</label>
+                  <input id="communication" type="text" />
                 </div>
                 <div class="field">
                   <button class="btn primary" id="checkBtn" type="button">Check payment profile</button>
@@ -591,8 +604,8 @@
         <section id="status" class="section">
           <h2>Project status</h2>
           <p>
-            DocTrust is early-stage but already executable. The current work is to tighten the spec, keep the SDKs
-            aligned, and add conformance tests and integration examples.
+            DocTrust is early-stage but already executable. The current work is to keep the SDKs aligned, harden the
+            trust registry and transport profile, and expand conformance coverage.
             <span class="dots" aria-hidden="true"><span></span><span></span><span></span></span>
           </p>
         </section>      </main>
@@ -600,10 +613,10 @@
       <footer class="footer">
         DocTrust is an open draft standard for signed invoices and payment instructions.
         <br />
-        <a href="https://github.com/MonkeyTime/doctrust">GitHub repo</a> ·
-        <a href="./README.md">README</a> ·
-        <a href="./spec/v1.md">Spec</a> ·
-        <a href="./SECURITY.md">Security</a> ·
+        <a href="https://github.com/MonkeyTime/doctrust">GitHub repo</a> -
+        <a href="./README.md">README</a> -
+        <a href="./spec/v1.md">Spec</a> -
+        <a href="./SECURITY.md">Security</a> -
         <a href="./conformance/README.md">Conformance</a>
       </footer>
     </div>
@@ -640,7 +653,9 @@
       const beneficiaryEl = document.getElementById("beneficiary");
       const amountEl = document.getElementById("amount");
       const referenceEl = document.getElementById("reference");
+      const dueDateEl = document.getElementById("dueDate");
       const transactionIdEl = document.getElementById("transactionId");
+      const communicationEl = document.getElementById("communication");
       const resultEl = document.getElementById("result");
       const checkBtn = document.getElementById("checkBtn");
 
@@ -649,7 +664,9 @@
       beneficiaryEl.value = samplePayload.document.beneficiary_name;
       amountEl.value = String(samplePayload.document.amount);
       referenceEl.value = samplePayload.document.reference;
+      dueDateEl.value = samplePayload.document.due_date;
       transactionIdEl.value = samplePayload.document.transaction_id;
+      communicationEl.value = samplePayload.document.communication;
 
       function present(value) {
         return value !== undefined && value !== null && value !== "";
@@ -658,10 +675,6 @@
       function same(actual, expected) {
         if (expected === undefined || expected === "") {
           return true;
-        }
-
-        if (typeof actual === "number") {
-          return Number(actual) === Number(expected);
         }
 
         return String(actual) === String(expected);
@@ -673,6 +686,17 @@
           const doc = payload.document || {};
           const required = ["document_id", "document_type", "beneficiary_name", "iban", "amount", "currency", "reference", "due_date", "transaction_id", "communication"];
           const missing = required.filter((field) => !present(doc[field]));
+          const expectedFields = {
+            beneficiary_name: beneficiaryEl.value,
+            iban: ibanEl.value,
+            amount: amountEl.value,
+            currency: "EUR",
+            reference: referenceEl.value,
+            due_date: dueDateEl.value,
+            transaction_id: transactionIdEl.value,
+            communication: communicationEl.value
+          };
+          const missingExpected = Object.keys(expectedFields).filter((field) => !present(expectedFields[field]));
           const mismatches = [];
 
           if (payload.intent !== "payment") {
@@ -685,14 +709,17 @@
           if (!same(doc.beneficiary_name, beneficiaryEl.value)) mismatches.push("beneficiary_name");
           if (!same(doc.iban, ibanEl.value)) mismatches.push("iban");
           if (!same(doc.amount, amountEl.value)) mismatches.push("amount");
+          if (!same(doc.due_date, dueDateEl.value)) mismatches.push("due_date");
           if (!same(doc.reference, referenceEl.value)) mismatches.push("reference");
           if (!same(doc.transaction_id, transactionIdEl.value)) mismatches.push("transaction_id");
+          if (!same(doc.communication, communicationEl.value)) mismatches.push("communication");
 
-          const ok = missing.length === 0 && mismatches.length === 0;
+          const ok = missing.length === 0 && missingExpected.length === 0 && mismatches.length === 0;
           resultEl.textContent = JSON.stringify({
             ok,
             profile: "payment.invoice",
             missingFields: missing,
+            missingExpectedFields: missingExpected,
             mismatches
           }, null, 2);
         } catch (error) {

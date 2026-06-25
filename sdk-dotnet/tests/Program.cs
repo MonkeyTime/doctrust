@@ -82,6 +82,38 @@ using var trustRegistryJsonDoc = JsonDocument.Parse(trustRegistry.ToJsonString()
 var registryResult = DocumentTrustPayloadSdk.VerifySignedPayload(signed, trustRegistry: trustRegistryJsonDoc.RootElement.Clone(), now: new DateTimeOffset(2026, 6, 26, 0, 0, 0, TimeSpan.Zero));
 Assert(registryResult.Ok, "Registry verify should pass");
 
+var missingBindingRegistry = JsonNode.Parse($$"""
+{
+  "version": "1",
+  "anchors": [
+    {
+      "trust_anchor_id": "registry:acme-trust-root",
+      "status": "active",
+      "public_keys": [
+        {
+          "key_id": "acme-eu-es256-2026-06",
+          "alg": "ES256",
+          "status": "active",
+          "public_key_pem": {{publicPemJson}}
+        }
+      ]
+    }
+  ]
+}
+""")!.AsObject();
+using var missingBindingRegistryJsonDoc = JsonDocument.Parse(missingBindingRegistry.ToJsonString());
+var missingBindingRejected = false;
+try
+{
+    DocumentTrustPayloadSdk.VerifySignedPayload(signed, trustRegistry: missingBindingRegistryJsonDoc.RootElement.Clone(), now: new DateTimeOffset(2026, 6, 26, 0, 0, 0, TimeSpan.Zero));
+}
+catch
+{
+    missingBindingRejected = true;
+}
+
+Assert(missingBindingRejected, "Registry without issuer binding should be rejected");
+
 var edKeyGen = new Ed25519KeyPairGenerator();
 edKeyGen.Init(new Ed25519KeyGenerationParameters(new SecureRandom()));
 var edKeyPair = edKeyGen.GenerateKeyPair();
@@ -126,10 +158,25 @@ var paymentProfile = DocumentTrustPayloadSdk.ValidatePaymentProfile(payload, new
     Amount: 1499.95m,
     Currency: "EUR",
     Reference: "RF18539007547034",
-    TransactionId: "TX-2026-06-25-000184"));
+    DueDate: "2026-07-15",
+    TransactionId: "TX-2026-06-25-000184",
+    Communication: "Invoice INV-2026-000184"));
 
 Assert(paymentProfile.Ok, "Payment profile should validate");
 Assert(paymentProfile.MissingFields.Count == 0, "Payment profile should not miss fields");
 Assert(paymentProfile.Mismatches.Count == 0, "Payment profile should not mismatch");
+
+var oversizedTransport = DocumentTrustPayloadSdk.EncodeTransportPayload(new string('A', 1024 * 1024 + 1));
+var oversizedRejected = false;
+try
+{
+    DocumentTrustPayloadSdk.DecodeTransportPayload(oversizedTransport);
+}
+catch
+{
+    oversizedRejected = true;
+}
+
+Assert(oversizedRejected, "Oversized compact payload should be rejected");
 
 Console.WriteLine("All .NET reference tests passed.");

@@ -27,11 +27,11 @@ export function resolveTrustAnchorPublicKey(registry, issuer) {
     throw new Error(`Unknown trust anchor: ${issuer.trust_anchor_id}`);
   }
 
-  if (anchor.status && anchor.status !== "active") {
+  if (anchor.status !== "active") {
     throw new Error(`Trust anchor is not active: ${issuer.trust_anchor_id}`);
   }
 
-  if (anchor.issuer_id && anchor.issuer_id !== issuer.issuer_id) {
+  if (anchor.issuer_id !== issuer.issuer_id) {
     throw new Error(`Issuer mismatch for trust anchor: ${issuer.trust_anchor_id}`);
   }
 
@@ -39,7 +39,7 @@ export function resolveTrustAnchorPublicKey(registry, issuer) {
     throw new Error(`Trust anchor has no public keys: ${issuer.trust_anchor_id}`);
   }
 
-  const currentKey = anchor.public_keys.find((key) => key && key.status !== "revoked");
+  const currentKey = anchor.public_keys.find((key) => key && key.status === "active");
 
   if (!currentKey || typeof currentKey.public_key_pem !== "string") {
     throw new Error(`Trust anchor has no active public key: ${issuer.trust_anchor_id}`);

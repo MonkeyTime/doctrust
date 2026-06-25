@@ -31,12 +31,12 @@ public static class TrustRegistry
             throw new ArgumentException($"Unknown trust anchor: {trustAnchorId}");
         }
 
-        if (anchor.TryGetProperty("status", out var status) && !string.Equals(status.GetString(), "active", StringComparison.Ordinal))
+        if (!anchor.TryGetProperty("status", out var status) || !string.Equals(status.GetString(), "active", StringComparison.Ordinal))
         {
             throw new ArgumentException($"Trust anchor is not active: {trustAnchorId}");
         }
 
-        if (anchor.TryGetProperty("issuer_id", out var registryIssuerId) && !string.Equals(registryIssuerId.GetString(), issuerId, StringComparison.Ordinal))
+        if (!anchor.TryGetProperty("issuer_id", out var registryIssuerId) || !string.Equals(registryIssuerId.GetString(), issuerId, StringComparison.Ordinal))
         {
             throw new ArgumentException($"Issuer mismatch for trust anchor: {trustAnchorId}");
         }
@@ -53,7 +53,7 @@ public static class TrustRegistry
                 continue;
             }
 
-            if (key.TryGetProperty("status", out var keyStatus) && string.Equals(keyStatus.GetString(), "revoked", StringComparison.Ordinal))
+            if (!key.TryGetProperty("status", out var keyStatus) || !string.Equals(keyStatus.GetString(), "active", StringComparison.Ordinal))
             {
                 continue;
             }

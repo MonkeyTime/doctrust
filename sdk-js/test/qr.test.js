@@ -46,3 +46,10 @@ test("verifies compact transport payloads end to end", () => {
   assert.equal(result.ok, true);
   assert.equal(result.documentId, "INV-2026-000184");
 });
+
+test("rejects oversized compact transport payloads", () => {
+  const oversizedJson = `"${"A".repeat(1024 * 1024 + 1)}"`;
+  const compact = encodeTransportPayload(oversizedJson);
+
+  assert.throws(() => decodeTransportPayload(compact));
+});

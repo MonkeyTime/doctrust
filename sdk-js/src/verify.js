@@ -4,6 +4,17 @@ import { PayloadValidationError, SignatureVerificationError } from "./errors.js"
 import { resolveTrustAnchorPublicKey } from "./trust-registry.js";
 import { decodeTransportPayload } from "./qr.js";
 
+const PAYMENT_EXPECTED_FIELDS = [
+  "beneficiary_name",
+  "iban",
+  "amount",
+  "currency",
+  "reference",
+  "due_date",
+  "transaction_id",
+  "communication"
+];
+
 function validateRequiredString(value, name) {
   if (typeof value !== "string" || value.length === 0) {
     throw new PayloadValidationError(`Missing or invalid ${name}`);
@@ -23,8 +34,8 @@ function compareExpectedValue(actual, expected) {
     return true;
   }
 
-  if (typeof actual === "number" || typeof expected === "number") {
-    return Number(actual) === Number(expected);
+  if ((typeof actual === "number" && !Number.isFinite(actual)) || (typeof expected === "number" && !Number.isFinite(expected))) {
+    return false;
   }
 
   return String(actual) === String(expected);
@@ -167,6 +178,7 @@ export function verifyTransportPayload(transportPayload, options = {}) {
 }
 
 export function validatePaymentProfile(payload, expected = {}) {
+  expected = expected && typeof expected === "object" && !Array.isArray(expected) ? expected : {};
   const verifiedPayload = validatePaymentProfilePayload(payload);
   const document = verifiedPayload.document;
 
@@ -184,6 +196,7 @@ export function validatePaymentProfile(payload, expected = {}) {
   ];
 
   const missingFields = requiredFields.filter((field) => !validateDocumentPaymentField(document, field));
+  const missingExpectedFields = PAYMENT_EXPECTED_FIELDS.filter((field) => expected[field] === undefined);
   const mismatches = [];
 
   if (verifiedPayload.intent !== "payment") {
@@ -207,17 +220,18 @@ export function validatePaymentProfile(payload, expected = {}) {
   ];
 
   for (const [field, expectedValue] of comparisons) {
-    if (expectedValue !== undefined && !compareExpectedValue(document[field], expectedValue)) {
+    if (!compareExpectedValue(document[field], expectedValue)) {
       mismatches.push(field);
     }
   }
 
-  const ok = missingFields.length === 0 && mismatches.length === 0;
+  const ok = missingFields.length === 0 && missingExpectedFields.length === 0 && mismatches.length === 0;
 
   return {
     ok,
     profile: "payment.invoice",
     missingFields,
+    missingExpectedFields,
     mismatches
   };
 }

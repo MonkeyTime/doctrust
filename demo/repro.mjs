@@ -68,7 +68,9 @@ const paymentProfile = sdk.validatePaymentProfile(payload, {
   amount: 1499.95,
   currency: "EUR",
   reference: "RF18539007547034",
-  transaction_id: "TX-2026-06-25-000184"
+  due_date: "2026-07-15",
+  transaction_id: "TX-2026-06-25-000184",
+  communication: "Invoice INV-2026-000184"
 });
 
 const tampered = JSON.parse(JSON.stringify(signed));

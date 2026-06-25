@@ -91,11 +91,59 @@ class ReferenceTests(unittest.TestCase):
             "amount": 1499.95,
             "currency": "EUR",
             "reference": "RF18539007547034",
+            "due_date": "2026-07-15",
             "transaction_id": "TX-2026-06-25-000184",
+            "communication": "Invoice INV-2026-000184",
         })
         self.assertTrue(result["ok"])
         self.assertEqual(result["missing_fields"], [])
+        self.assertEqual(result["missing_expected_fields"], [])
         self.assertEqual(result["mismatches"], [])
+
+    def test_rejects_unsafe_numeric_coercion(self):
+        payload = dict(self.payload)
+        payload["document"] = dict(self.payload["document"])
+        payload["document"]["amount"] = "9007199254740993"
+        result = validate_payment_profile(payload, {
+            "beneficiary_name": "ACME Europe SARL",
+            "iban": "BE68 5390 0754 7034",
+            "amount": 9007199254740992,
+            "currency": "EUR",
+            "reference": "RF18539007547034",
+            "due_date": "2026-07-15",
+            "transaction_id": "TX-2026-06-25-000184",
+            "communication": "Invoice INV-2026-000184",
+        })
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["mismatches"], ["amount"])
+        self.assertEqual(result["missing_expected_fields"], [])
+
+    def test_rejects_oversized_compact_payloads(self):
+        compact = encode_transport_payload('"' + ("A" * (1024 * 1024 + 1)) + '"')
+        with self.assertRaises(Exception):
+            decode_transport_payload(compact)
+
+    def test_rejects_missing_issuer_binding_in_trust_registry(self):
+        signed = sign_payload(self.payload, self.private_key_pem)
+        trust_registry = {
+            "version": "1",
+            "anchors": [
+                {
+                    "trust_anchor_id": "registry:acme-trust-root",
+                    "status": "active",
+                    "public_keys": [
+                        {
+                            "key_id": "acme-eu-ed25519-2026-06",
+                            "alg": "Ed25519",
+                            "status": "active",
+                            "public_key_pem": self.public_key_pem,
+                        }
+                    ],
+                }
+            ],
+        }
+        with self.assertRaises(Exception):
+            verify_signed_payload(signed, trust_registry=trust_registry, now=datetime(2026, 6, 26, tzinfo=timezone.utc))
 
 
 if __name__ == "__main__":

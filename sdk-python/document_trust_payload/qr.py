@@ -2,6 +2,7 @@ import base64
 import zlib
 
 COMPACT_QR_PREFIX = "dtp1z."
+MAX_DECOMPRESSED_BYTES = 1024 * 1024
 
 
 def encode_transport_payload(payload_json: str) -> str:
@@ -17,7 +18,15 @@ def decode_transport_payload(input_value: str) -> str:
         encoded = input_value[len(COMPACT_QR_PREFIX) :]
         padding = "=" * (-len(encoded) % 4)
         compressed = base64.urlsafe_b64decode(encoded + padding)
-        return zlib.decompress(compressed, wbits=-15).decode("utf-8")
+        decompressor = zlib.decompressobj(wbits=-15)
+        output = bytearray()
+        output.extend(decompressor.decompress(compressed, MAX_DECOMPRESSED_BYTES))
+        if decompressor.unconsumed_tail:
+            raise ValueError("Compact transport payload is too large")
+        output.extend(decompressor.flush(MAX_DECOMPRESSED_BYTES - len(output)))
+        if len(output) > MAX_DECOMPRESSED_BYTES or not decompressor.eof:
+            raise ValueError("Compact transport payload is too large")
+        return output.decode("utf-8")
 
     return input_value
 
