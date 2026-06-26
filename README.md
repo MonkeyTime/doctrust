@@ -32,6 +32,7 @@ Email and PDF workflows are easy to imitate. DocTrust adds a signed payload and 
 ## Repository layout
 
 - `spec/` - protocol and format specification
+- `governance/` - trust registry governance and operating model
 - `schemas/` - machine-readable schemas
 - `conformance/` - versioned conformance vectors
 - `examples/` - payload and registry examples
